@@ -170,6 +170,7 @@ struct matrix_wrapper
            &wt::this_times_diagonal_times_this_transpose)
       .def("__str__", str_)
       .def("__repr__", repr)
+      .def_pickle(SparseMatrixPickleSuite<T>())
     ;
   }
 

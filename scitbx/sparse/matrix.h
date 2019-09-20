@@ -12,6 +12,10 @@
 #include <scitbx/sparse/vector.h>
 #include <scitbx/sparse/util.h>
 #include <scitbx/sparse/operators.h>
+#include <boost/python.hpp>
+#include <boost/python/def.hpp>
+
+using namespace boost::python;
 
 namespace scitbx { namespace sparse {
 
@@ -566,6 +570,43 @@ void matrix_transpose_times_dense_vector<T>::assign_to(af::ref<T> const &w) cons
     }
   }
 }
+
+template <class T>
+struct SparseMatrixPickleSuite : boost::python::pickle_suite {
+
+  typedef vector<T, copy_semantic_vector_container> column_type;
+  typedef typename column_type::const_iterator const_row_iterator;
+  typedef typename column_type::index_type index_type;
+  typedef T value_type;
+
+  static boost::python::tuple getinitargs(const matrix<T> &obj){
+    return boost::python::make_tuple(
+      obj.n_rows(),
+      obj.n_cols());
+  }
+
+  static boost::python::list getstate(const matrix<T> &obj){
+    boost::python::list state;
+    /// want state to have row_idx, col_idx, value for nonzero elements
+    for (index_type j=0; j < obj.n_cols(); j++) {
+      for(const_row_iterator p = obj.col(j).begin(); p != obj.col(j).end(); p++) {
+        state.append(boost::python::make_tuple(p.index(), j, *p));
+      }
+    }
+    return state;
+  }
+
+  static void setstate(matrix<T>& obj, boost::python::list state){
+    boost::python::ssize_t n = boost::python::len(state);
+    for (boost::python::ssize_t i = 0; i<n; i++){
+      boost::python::object elem = state[i];
+      int row_idx = boost::python::extract<int>(elem[0]);
+      int col_idx = boost::python::extract<int>(elem[1]);
+      value_type value = boost::python::extract<value_type>(elem[2]);
+      obj(row_idx, col_idx) = value;
+    }
+  }
+};
 
 }} // namespace scitbx::sparse
 
